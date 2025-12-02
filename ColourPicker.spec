@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['c:\\Users\\Nina\\Documents\\GodotProjects\\pixelColourPicker\\ColourPicker.py'],
+    ['c:\\Users\\Nina\\Documents\\GodotProjects\\ColourPicker\\ColourPicker.py'],
     pathex=[],
     binaries=[],
     datas=[],

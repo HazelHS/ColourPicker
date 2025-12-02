@@ -1,4 +1,4 @@
-('c:\\Users\\Nina\\Documents\\GodotProjects\\pixelColourPicker\\build\\ColourPicker\\PYZ-00.pyz',
+('c:\\Users\\Nina\\Documents\\GodotProjects\\ColourPicker\\build\\ColourPicker\\PYZ-00.pyz',
  [('PIL', 'C:\\Python312\\Lib\\site-packages\\PIL\\__init__.py', 'PYMODULE'),
   ('PIL.BlpImagePlugin',
    'C:\\Python312\\Lib\\site-packages\\PIL\\BlpImagePlugin.py',
