@@ -1,7 +1,1 @@
-Im partially colourblind (protanopia) and needed a utility for pixel art, which works best with shading between complementary colours. 
-Naturally, my eyes are unreliable enough that picking them out manually is ... inadvisable. 
-So I made this colour wheel that will automatically pick out the complementary colour to which ever colour is clicked on, 
-and display a gradient shifting colour palette from chosen colour to the complementary colour.
-With some extra fine tuning for gradient curves, hue shifting and shading etc. All of which can be export as a palette (.gpl format, you can open it with notepad)
-
-This was all just a quick afternoon, mostly chatbpt generated spaghetti mess but it works well enough for my needs and thought I may as well share it.
+Im partially colourblind (protanopia) and needed a utility for pixel art, which works best with shading between complementary colours. Naturally, my eyes are unreliable enough that picking them out manually is ... inadvisable. So I made this colour wheel that will automatically pick out the complementary colour to which ever colour is clicked on, and display a gradient shifting colour palette from chosen colour to the complementary colour. With some extra fine tuning for gradient curves, hue shifting and shading etc. All of which can be export as a palette (.gpl format, you can open it with notepad). This was all just a quick afternoon, mostly chatbpt generated spaghetti mess but it works well enough for my needs and thought I may as well share it.
