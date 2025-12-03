@@ -1,1 +1,12 @@
 /ColourPicker.exe
+/build/
+/dist/
+/__pycache__/
+/*.pyc
+*.pyo
+*.pyd
+*.spec
+.DS_Store
+*.log
+*.bak
+*.tmp
