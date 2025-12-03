@@ -275,3 +275,46 @@ def hex_to_rgb(hex_str):
         return (r, g, b)
     except ValueError:
         return None
+
+
+def calculate_opposite_hue(h):
+    """
+    Calculate the opposite hue on the color wheel.
+    
+    Args:
+        h: Hue value (0-1)
+    
+    Returns:
+        Opposite hue value (0-1)
+    """
+    return (h + 0.5) % 1.0
+
+
+def get_color_info(h, s, v):
+    """
+    Get complete color information for an HSV color.
+    
+    Args:
+        h, s, v: HSV values (0-1)
+    
+    Returns:
+        Dictionary with rgb, hex, name, opp_h, opp_rgb, opp_hex, opp_name
+    """
+    rgb = hsv_to_rgb255(h, s, v)
+    hex_code = rgb_to_hex(rgb)
+    name = get_colour_name(rgb)
+    
+    opp_h = calculate_opposite_hue(h)
+    opp_rgb = hsv_to_rgb255(opp_h, s, v)
+    opp_hex = rgb_to_hex(opp_rgb)
+    opp_name = get_colour_name(opp_rgb)
+    
+    return {
+        'rgb': rgb,
+        'hex': hex_code,
+        'name': name,
+        'opp_h': opp_h,
+        'opp_rgb': opp_rgb,
+        'opp_hex': opp_hex,
+        'opp_name': opp_name
+    }
