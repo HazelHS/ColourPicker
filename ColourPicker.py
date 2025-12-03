@@ -88,6 +88,10 @@ class ColourWheelApp:
         create_text_display(self)
         create_gradient_panel(self)
         create_export_button(self)
+        # Add new text box for hovered color readout
+        self.hover_text = tk.Text(self.root, height=2, font=("Arial", 12), wrap="none")
+        self.hover_text.pack(fill="x")
+        self.hover_text.config(state="disabled")
         
         # Initialize display
         self.populate_squares()
@@ -154,64 +158,74 @@ class ColourWheelApp:
         """Handle gradient steps slider change."""
         self.gradient_steps = int(self.interval_slider_widget.get())
         self.schedule_populate_squares()
-        
-        # Update text display if we have a selected color
-        if self.selected_h is not None and self.locked:
-            if self.last_panel == "squares" and self.last_square_idx is not None:
-                self.on_square_hover(self.last_square_idx)
-            elif self.last_panel == "wheel":
-                self._update_selected_color_display()
-    
+        # Always update text display to match the hovered/locked gradient square or first square
+        self._update_gradient_text_readout()
+
     def on_curve_slider(self, event=None):
         """Handle gradient curve slider change."""
         self.gradient_curve = self.curve_slider_widget.get()
         self.schedule_populate_squares()
-        
-        # Update text display if we have a selected color
-        if self.selected_h is not None and self.locked:
-            if self.last_panel == "squares" and self.last_square_idx is not None:
-                self.on_square_hover(self.last_square_idx)
-            elif self.last_panel == "wheel":
-                self._update_selected_color_display()
-    
+        self._update_gradient_text_readout()
+
     def on_fine_slider(self, event=None):
         """Handle fine-tune slider changes."""
         self.fine_shade1 = self.fine_shade1_widget.get() / 100.0
         self.fine_shade2 = self.fine_shade2_widget.get() / 100.0
         self.fine_hue2 = self.fine_hue2_widget.get() / 360.0
         self.schedule_populate_squares()
-        
-        # Update text display if we have a selected color
-        if self.selected_h is not None and self.locked:
-            if self.last_panel == "squares" and self.last_square_idx is not None:
-                self.on_square_hover(self.last_square_idx)
-            elif self.last_panel == "wheel":
-                self._update_selected_color_display()
-    
-    def _update_selected_color_display(self):
-        """Update text display and input fields with current selected color."""
-        if self.selected_h is None:
-            return
-        
-        # Update text display
-        hex_code = rgb_to_hex(self.selected_rgb)
-        name = get_colour_name(self.selected_rgb)
-        opp_hex = rgb_to_hex(self.selected_opp_rgb)
-        opp_name = get_colour_name(self.selected_opp_rgb)
-        
+        self._update_gradient_text_readout()  # <-- Always update text readout
+
+    def _update_gradient_text_readout(self):
+        """Update text display to match the hovered/locked gradient square or middle square."""
+        steps = int(self.gradient_steps)
+        # If no square is selected, show the middle square
+        if self.last_panel == "squares" and self.last_square_idx is not None:
+            idx = self.last_square_idx
+        else:
+            idx = steps // 2  # Use middle square for better representation
+            self.last_square_idx = idx
+            self.last_panel = "squares"
+        # Use selected color or default to wheel center
+        if self.selected_h is not None and self.selected_s is not None and self.selected_v is not None:
+            h1, s1, v1 = self.selected_h, self.selected_s, self.selected_v
+            h2, s2 = self.selected_opp_h, self.selected_s
+            v2 = self.selected_v
+        else:
+            h1 = (0 + self.hue_shift) % 1.0
+            s1 = 1
+            v1 = self.shade
+            h2 = (h1 + 0.5) % 1.0
+            s2 = 1
+            v2 = self.shade
+        # Apply fine-tune adjustments
+        v1 = self.shade * self.fine_shade1
+        v2 = self.shade * self.fine_shade2
+        h2 = (h2 + self.fine_hue2) % 1.0
+        # Calculate color at idx
+        t = idx / (steps - 1) if steps > 1 else 0
+        t_curve = self.curve_t(t, self.gradient_curve)
+        dh = ((h2 - h1 + 1.5) % 1.0) - 0.5
+        h = (h1 + t_curve * dh) % 1.0
+        s = s1 + t_curve * (s2 - s1)
+        v = v1 + t_curve * (v2 - v1)
+        rgb = hsv_to_rgb255(h, s, v)
+        hex_code = rgb_to_hex(rgb)
+        name = get_colour_name(rgb)
+        opp_h = (h + 0.5) % 1.0
+        opp_rgb = hsv_to_rgb255(opp_h, s, v)
+        opp_hex = rgb_to_hex(opp_rgb)
+        opp_name = get_colour_name(opp_rgb)
         text = (
-            f"Colour: {hex_code} {self.selected_rgb} {name}\n"
-            f"Opposite: {opp_hex} {self.selected_opp_rgb} {opp_name}"
+            f"Colour: {hex_code} {rgb} {name}\n"
+            f"Opposite: {opp_hex} {opp_rgb} {opp_name}"
         )
         self.text.config(state="normal")
         self.text.delete("1.0", tk.END)
         self.text.insert(tk.END, text)
         self.text.config(state="disabled")
-        
-        # Update input fields
-        self.color_input.set_rgb(*self.selected_rgb)
+        self.color_input.set_rgb(*rgb)
         self.color_input.set_hex(hex_code)
-    
+
     def schedule_populate_squares(self):
         """Debounce populate_squares calls - only execute after 50ms of inactivity."""
         if self.populate_timer:
@@ -326,6 +340,16 @@ class ColourWheelApp:
             self.text.insert(tk.END, text)
             self.text.config(state="disabled")
             
+            # Update hover_text for wheel (show both color and opposite)
+            hover_text = (
+                f"{hex_code} {rgb} {name}\n"
+                f"{opp_hex} {opp_rgb} {opp_name}"
+            )
+            self.hover_text.config(state="normal")
+            self.hover_text.delete("1.0", tk.END)
+            self.hover_text.insert(tk.END, hover_text)
+            self.hover_text.config(state="disabled")
+            
             self.last_panel = "wheel"
             self.last_square_idx = None
             
@@ -339,9 +363,9 @@ class ColourWheelApp:
             
             self.schedule_populate_squares()
         else:
-            self.text.config(state="normal")
-            self.text.delete("1.0", tk.END)
-            self.text.config(state="disabled")
+            self.hover_text.config(state="normal")
+            self.hover_text.delete("1.0", tk.END)
+            self.hover_text.config(state="disabled")
     
     def toggle_lock(self, event):
         """Toggle lock state when clicking on wheel or squares."""
@@ -410,6 +434,50 @@ class ColourWheelApp:
             square.bind("<Button-1>", lambda e, idx=i: self.on_square_click(idx))
             self.squares.append(square)
 
+        # --- Update main text readout with full gradient ---
+        gradient_lines = []
+        for i, rgb in enumerate(colors):
+            hex_code = rgb_to_hex(rgb)
+            name = get_colour_name(rgb)
+            gradient_lines.append(f"{hex_code} {rgb} {name}")
+        gradient_text = "\n".join(gradient_lines)
+        self.text.config(state="normal")
+        self.text.delete("1.0", tk.END)
+        self.text.insert(tk.END, gradient_text)
+        self.text.config(state="disabled")
+        # --- NEW: Update text readout after squares are created ---
+        idx = self.last_square_idx if self.last_panel == "squares" and self.last_square_idx is not None else 0
+        if colors:
+            rgb = colors[idx]
+            hex_code = rgb_to_hex(rgb)
+            name = get_colour_name(rgb)
+            h1_for_idx = h1
+            s1_for_idx = s1
+            v1_for_idx = v1
+            h2_for_idx = h2
+            s2_for_idx = s2
+            v2_for_idx = v2
+            t = idx / (steps - 1) if steps > 1 else 0
+            t_curve = self.curve_t(t, self.gradient_curve)
+            dh = ((h2_for_idx - h1_for_idx + 1.5) % 1.0) - 0.5
+            h = (h1_for_idx + t_curve * dh) % 1.0
+            s = s1_for_idx + t_curve * (s2_for_idx - s1_for_idx)
+            v = v1_for_idx + t_curve * (v2_for_idx - v1_for_idx)
+            opp_h = (h + 0.5) % 1.0
+            opp_rgb = hsv_to_rgb255(opp_h, s, v)
+            opp_hex = rgb_to_hex(opp_rgb)
+            opp_name = get_colour_name(opp_rgb)
+            text = (
+                f"Colour: {hex_code} {rgb} {name}\n"
+                f"Opposite: {opp_hex} {opp_rgb} {opp_name}"
+            )
+            self.text.config(state="normal")
+            self.text.delete("1.0", tk.END)
+            self.text.insert(tk.END, text)
+            self.text.config(state="disabled")
+            self.color_input.set_rgb(*rgb)
+            self.color_input.set_hex(hex_code)
+
     def on_square_hover(self, idx):
         """Handle mouse hover over gradient square."""
         if self.locked and self.last_panel == "wheel":
@@ -461,6 +529,12 @@ class ColourWheelApp:
         self.text.delete("1.0", tk.END)
         self.text.insert(tk.END, text)
         self.text.config(state="disabled")
+        
+        # Only update hover_text for the hovered color (not opposite)
+        self.hover_text.config(state="normal")
+        self.hover_text.delete("1.0", tk.END)
+        self.hover_text.insert(tk.END, f"{hex_code} {rgb} {name}")
+        self.hover_text.config(state="disabled")
         
         self.last_panel = "squares"
         self.last_square_idx = idx

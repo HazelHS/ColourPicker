@@ -1,6 +1,7 @@
 import os
 import tkinter.filedialog as fd
-from color_utils import hsv_to_rgb255, get_colour_name
+from color_utils import rgb_to_hex, get_colour_name
+from gradient_logic import calculate_gradient_colors
 
 def export_palette(
     gradient_steps,
@@ -45,28 +46,14 @@ def export_palette(
         s2 = 1
         v2 = shade
 
-    # Apply fine-tune adjustments (multiply, don't replace)
-    v1 = v1 * fine_shade1
-    v2 = v2 * fine_shade2
-    h2 = (h2 + fine_hue2) % 1.0
+    # Use the same gradient logic as the GUI
+    colors = calculate_gradient_colors(
+        steps, h1, s1, v1, h2, s2, v2,
+        fine_shade1, fine_shade2, fine_hue2,
+        gradient_curve, shade
+    )
 
-    def curve_t(t, curve):
-        c = curve / 100.0
-        if c == 0:
-            return t
-        elif c > 0:
-            return t ** (1 / (1 + c * 2))
-        else:
-            return t ** (1 - c * 2)
-
-    for i in range(steps):
-        t = i / (steps - 1) if steps > 1 else 0
-        t_curve = curve_t(t, gradient_curve)
-        dh = ((h2 - h1 + 1.5) % 1.0) - 0.5
-        h = (h1 + t_curve * dh) % 1.0
-        s = s1 + t_curve * (s2 - s1)
-        v = v1 + t_curve * (v2 - v1)
-        rgb = hsv_to_rgb255(h, s, v)
+    for rgb in colors:
         name = get_colour_name(rgb)
         lines.append(f"{rgb[0]:3d} {rgb[1]:3d} {rgb[2]:3d} {name}")
 

@@ -260,13 +260,13 @@ def create_fine_tune_panel(app):
         fine_tune_frame, "End Shade", 0, 100, 100, resolution=0.001, length=200
     )
     app.fine_shade2_widget.grid(row=0, column=1, sticky="ew", padx=2, pady=2)
-    app.fine_shade2_widget.set_callbacks(app.on_fine_slider)
+    app.fine_shade2_widget.set_callbacks(app.on_fine_slider)  # <-- Ensure this is correct
 
     app.fine_hue2_widget = SliderWithEntry(
         fine_tune_frame, "End Hue Shift", -180, 180, 0, resolution=0.001, length=500
     )
     app.fine_hue2_widget.grid(row=1, column=0, columnspan=2, sticky="ew", padx=2, pady=2)
-    app.fine_hue2_widget.set_callbacks(app.on_fine_slider)
+    app.fine_hue2_widget.set_callbacks(app.on_fine_slider)  # <-- Ensure this is correct
 
     fine_tune_frame.grid_columnconfigure(0, weight=1)
     fine_tune_frame.grid_columnconfigure(1, weight=1)
