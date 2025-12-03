@@ -125,6 +125,39 @@ class ColourWheelApp:
         self.color_input.set_rgb(*color_info['rgb'])
         self.color_input.set_hex(color_info['hex'])
     
+    def _update_gradient_endpoints_display(self):
+        """Update text display to show first and last gradient colors (what will be exported)."""
+        steps = int(self.gradient_steps)
+        h1, s1, v1, h2, s2, v2 = self._get_default_colors()
+        
+        # Get first color (index 0)
+        first_color_info = get_gradient_color_at_index(
+            0, steps, h1, s1, v1, h2, s2, v2,
+            self.fine_shade1, self.fine_shade2, self.fine_hue2,
+            self.gradient_curve, self.shade
+        )
+        
+        # Get last color (index steps-1)
+        last_color_info = get_gradient_color_at_index(
+            steps - 1, steps, h1, s1, v1, h2, s2, v2,
+            self.fine_shade1, self.fine_shade2, self.fine_hue2,
+            self.gradient_curve, self.shade
+        )
+        
+        # Display first and last colors
+        text = (
+            f"Start: {first_color_info['hex']} {first_color_info['rgb']} {first_color_info['name']}\n"
+            f"End: {last_color_info['hex']} {last_color_info['rgb']} {last_color_info['name']}"
+        )
+        self.text.config(state="normal")
+        self.text.delete("1.0", tk.END)
+        self.text.insert(tk.END, text)
+        self.text.config(state="disabled")
+        
+        # Update RGB/Hex inputs with first color
+        self.color_input.set_rgb(*first_color_info['rgb'])
+        self.color_input.set_hex(first_color_info['hex'])
+    
     # Slider callbacks
     
     def on_slider(self, event=None):
@@ -186,9 +219,9 @@ class ColourWheelApp:
         self.fine_shade2 = self.fine_shade2_widget.get() / 100.0
         self.fine_hue2 = self.fine_hue2_widget.get() / 360.0
         self.schedule_populate_squares()
-        # Only update gradient text readout if we're in squares mode
-        if self.last_panel == "squares" and self.last_square_idx is not None:
-            self._update_gradient_text_readout()
+        
+        # Always update the gradient endpoints display when fine-tune sliders change
+        self._update_gradient_endpoints_display()
 
     def _update_gradient_text_readout(self):
         """Update text display to match the hovered/locked gradient square."""
@@ -208,6 +241,7 @@ class ColourWheelApp:
             self.gradient_curve, self.shade
         )
         
+        # Show the specific square's color instead of gradient endpoints
         self._update_color_display(color_info)
 
     def schedule_populate_squares(self):
@@ -372,27 +406,8 @@ class ColourWheelApp:
             square.bind("<Button-1>", lambda e, idx=i: self.on_square_click(idx))
             self.squares.append(square)
 
-        # Update main text readout
-        gradient_lines = []
-        for i, rgb in enumerate(colors):
-            hex_code = rgb_to_hex(rgb)
-            name = get_colour_name(rgb)
-            gradient_lines.append(f"{hex_code} {rgb} {name}")
-        gradient_text = "\n".join(gradient_lines)
-        self.text.config(state="normal")
-        self.text.delete("1.0", tk.END)
-        self.text.insert(tk.END, gradient_text)
-        self.text.config(state="disabled")
-        
-        # Update color info for selected index
-        idx = self.last_square_idx if (self.last_panel == "squares" and self.last_square_idx is not None) else 0
-        if colors:
-            color_info = get_gradient_color_at_index(
-                idx, steps, h1, s1, v1, h2, s2, v2,
-                self.fine_shade1, self.fine_shade2, self.fine_hue2,
-                self.gradient_curve, self.shade
-            )
-            self._update_color_display(color_info)
+        # Update main text readout with gradient endpoints
+        self._update_gradient_endpoints_display()
 
     def on_square_hover(self, idx):
         """Handle mouse hover over gradient square."""
@@ -408,7 +423,7 @@ class ColourWheelApp:
             self.gradient_curve, self.shade
         )
         
-        # Always show the single color in square_hover_text (even when locked)
+        # Always show the single color in square_hover_text
         hover_text = f"{color_info['hex']} {color_info['rgb']} {color_info['name']}"
         self.square_hover_text.config(state="normal")
         self.square_hover_text.delete("1.0", tk.END)
@@ -420,7 +435,7 @@ class ColourWheelApp:
             self._update_color_display(color_info)
             self.last_panel = "squares"
             self.last_square_idx = idx
-    
+
     def on_square_click(self, idx):
         """Handle clicking on a gradient square."""
         self.toggle_lock(None)
