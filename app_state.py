@@ -43,6 +43,8 @@ class AppState:
     last_panel: str = "wheel"
     last_square_idx: Optional[int] = None
     hovered_square_idx: Optional[int] = None
+    quantize_levels: int = 65536  # kept for compatibility; UI uses 1..256 now
+    quantize_enabled: bool = True  # toggle for enabling/disabling quantization
     
     color: ColorState = None
     gradient: GradientParams = None

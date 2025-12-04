@@ -213,8 +213,34 @@ class ColorInputPanel:
         self.hex_entry.insert(0, hex_str)
 
 
+def create_quantize_slider(app):
+    """Create quantize depth slider (1..256) with an entry box (3 decimal places) and enable checkbox."""
+    depth_frame = tk.LabelFrame(app.root, text="Quantize Depth", padx=4, pady=4)
+    depth_frame.pack(fill="x", pady=2)
+
+    tk.Label(depth_frame, text="Levels:").pack(side="left", padx=5)
+
+    # SliderWithEntry (shows entry with 3 decimals)
+    app.quant_widget = SliderWithEntry(depth_frame, "Quantize Levels", 1, 256, 256, resolution=0.001, length=400)
+    app.quant_widget.pack(fill="x", expand=True, padx=5)
+    app.quant_widget.set_callbacks(app.on_quant_change)
+
+    # Enable/disable checkbox
+    app.quant_enabled_var = tk.BooleanVar(value=True)
+    app.quant_enable_chk = tk.Checkbutton(
+        depth_frame,
+        text="Enable",
+        variable=app.quant_enabled_var,
+        command=lambda: app.on_quant_toggle()
+    )
+    app.quant_enable_chk.pack(side="left", padx=6)
+
+    tk.Label(depth_frame, text="(1 = heavy quantize, 256 = full range)").pack(side="left", padx=5)
+
+
 def create_color_input_panel(app):
     """Create RGB and Hex input panel."""
+    create_quantize_slider(app)  # use new slider + entry control
     app.color_input = ColorInputPanel(app.root)
     app.color_input.pack(fill="x", pady=2)
     app.color_input.set_callbacks(app.apply_rgb_input, app.apply_hex_input)

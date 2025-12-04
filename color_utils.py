@@ -290,22 +290,45 @@ def calculate_opposite_hue(h):
     return (h + 0.5) % 1.0
 
 
-def get_color_info(h, s, v):
+def quantize_rgb(rgb, levels):
+    """
+    Quantize RGB values to a specific per-channel level count.
+    levels: int (1..65536). Values >= 256 are effectively full 8-bit per-channel range.
+    """
+    if levels is None or levels >= 256:
+        return rgb
+    if levels <= 1:
+        # extreme quantization: single representative
+        return (128, 128, 128)
+
+    step = 255.0 / (levels - 1)
+    r = int(round(rgb[0] / step) * step)
+    g = int(round(rgb[1] / step) * step)
+    b = int(round(rgb[2] / step) * step)
+    # clamp
+    r = max(0, min(255, r))
+    g = max(0, min(255, g))
+    b = max(0, min(255, b))
+    return (r, g, b)
+
+
+def hsv_to_rgb255_quantized(h, s, v, levels=65536):
+    """Convert HSV to RGB then quantize according to number of levels."""
+    rgb = hsv_to_rgb255(h, s, v)
+    return quantize_rgb(rgb, levels)
+
+
+def get_color_info(h, s, v, levels=65536):
     """
     Get complete color information for an HSV color.
-    
-    Args:
-        h, s, v: HSV values (0-1)
-    
-    Returns:
-        Dictionary with rgb, hex, name, opp_h, opp_rgb, opp_hex, opp_name
+    levels: quantize levels forwarded to HSV->RGB conversion
     """
-    rgb = hsv_to_rgb255(h, s, v)
+    rgb = hsv_to_rgb255_quantized(h, s, v, levels)
     hex_code = rgb_to_hex(rgb)
     name = get_colour_name(rgb)
     
     opp_h = calculate_opposite_hue(h)
-    opp_rgb = hsv_to_rgb255(opp_h, s, v)
+    opp_rgb = hsv_to_rgb255_quantized(opp_h, s, v, levels)
     opp_hex = rgb_to_hex(opp_rgb)
     opp_name = get_colour_name(opp_rgb)
     

@@ -15,6 +15,7 @@ def export_palette(
     selected_s,
     selected_v,
     selected_opp_h,
+    levels=65536
 ):
     """Export current gradient as a GIMP palette file (.gpl)."""
     file_path = fd.asksaveasfilename(
@@ -50,7 +51,7 @@ def export_palette(
     colors = calculate_gradient_colors(
         steps, h1, s1, v1, h2, s2, v2,
         fine_shade1, fine_shade2, fine_hue2,
-        gradient_curve, shade
+        gradient_curve, shade, levels
     )
 
     for rgb in colors:

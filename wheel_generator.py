@@ -5,14 +5,31 @@ import numpy as np
 from PIL import Image
 
 
-def generate_colour_wheel(size=300, hue_shift=0.0, shade=1.0):
+def quantize_array(arr, levels):
     """
-    Generate a color wheel image with HSV color space.
+    Quantize an RGB numpy array (H x W x 3) according to numeric levels.
+    levels: int (1..65536). If levels >= 256, return arr unchanged (8-bit channels).
+    """
+    if levels is None or levels >= 256:
+        return arr
+    if levels <= 1:
+        # map everything to mid-grey for extreme quantization
+        return np.full_like(arr, 128, dtype=np.uint8)
+
+    step = 255.0 / (levels - 1)
+    quantized = np.round(arr.astype(np.float32) / step) * step
+    return np.clip(quantized, 0, 255).astype(np.uint8)
+
+
+def generate_colour_wheel(size=300, hue_shift=0.0, shade=1.0, levels=65536):
+    """
+    Generate a color wheel image with an optional quantization level (1..65536).
     
     Args:
         size: Width and height of the image in pixels
         hue_shift: Rotation of hue values (0-1)
         shade: Overall brightness/value (0-1)
+        levels: Quantization level (1..65536)
     
     Returns:
         PIL Image object of the color wheel
@@ -49,6 +66,10 @@ def generate_colour_wheel(size=300, hue_shift=0.0, shade=1.0):
     arr[mask, 0] = (r_vals * 255).astype(np.uint8)
     arr[mask, 1] = (g_vals * 255).astype(np.uint8)
     arr[mask, 2] = (b_vals * 255).astype(np.uint8)
+    
+    # Apply quantization if requested (effective only when levels < 256)
+    if levels is not None and levels < 256:
+        arr = quantize_array(arr, levels)
 
     img = Image.fromarray(arr, "RGB")
     return img

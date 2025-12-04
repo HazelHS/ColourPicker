@@ -138,6 +138,22 @@ class ColourWheelApp:
     def fine_hue2(self, value):
         self.state.gradient.fine_hue2 = value
     
+    @property
+    def color_depth(self):
+        return self.state.color_depth
+
+    @color_depth.setter
+    def color_depth(self, value):
+        self.state.color_depth = value
+
+    @property
+    def quantize_levels(self):
+        return self.state.quantize_levels
+
+    @quantize_levels.setter
+    def quantize_levels(self, value):
+        self.state.quantize_levels = int(value)
+
     # Display methods
     
     def _update_color_display(self, color_info):
@@ -157,7 +173,7 @@ class ColourWheelApp:
     def _update_gradient_endpoints_display(self):
         """Update text display to show first and last gradient colors."""
         first_color, last_color = self.gradient_display.get_gradient_endpoint_colors(
-            self.state.hue_shift, self.state.shade
+            self.state.hue_shift, self.state.shade, self.state.quantize_levels
         )
         
         text = (
@@ -175,6 +191,90 @@ class ColourWheelApp:
     
     # Slider callbacks
     
+    def on_depth_change(self):
+        """Handle color depth selector change."""
+        # depth_var set in ui_components.OptionMenu
+        self.state.color_depth = getattr(self, "depth_var", tk.StringVar(value="unlimited")).get()
+        # regenerate wheel with depth
+        self.img = generate_colour_wheel(self.size, self.state.hue_shift, self.state.shade, self.state.quantize_levels)
+        self.tk_img = ImageTk.PhotoImage(self.img)
+        self.canvas.itemconfig(self.canvas_image, image=self.tk_img)
+
+        # update current color display using quantized color info
+        color = self.state.color
+        if color.h is not None:
+            color_info = get_color_info(color.h, color.s, color.v, self.state.quantize_levels)
+            color.rgb = color_info['rgb']
+            color.opp_rgb = color_info['opp_rgb']
+            self._update_color_display(color_info)
+
+        # update gradient squares
+        self.schedule_populate_squares()
+
+    def on_quant_change(self):
+        """Handle quantize slider change (slider + entry)."""
+        # ignore changes when disabled
+        if not getattr(self, "quant_enabled_var", tk.BooleanVar(value=True)).get():
+            return
+
+        # read float from the SliderWithEntry and convert to integer levels
+        try:
+            val = float(getattr(self, "quant_widget").get())
+        except Exception:
+            val = 256.0
+        levels = int(round(val))
+        # clamp to allowed range 1..256
+        levels = max(1, min(256, levels))
+        self.state.quantize_levels = levels
+
+        # regenerate wheel with new levels
+        self.img = generate_colour_wheel(self.size, self.state.hue_shift, self.state.shade, self.state.quantize_levels)
+        self.tk_img = ImageTk.PhotoImage(self.img)
+        self.canvas.itemconfig(self.canvas_image, image=self.tk_img)
+
+        # update current color display using quantized color info
+        color = self.state.color
+        if color.h is not None:
+            color_info = get_color_info(color.h, color.s, color.v, self.state.quantize_levels)
+            color.rgb = color_info['rgb']
+            color.opp_rgb = color_info['opp_rgb']
+            self._update_color_display(color_info)
+
+        # update gradient squares
+        self.schedule_populate_squares()
+
+    def on_quant_toggle(self):
+        """Enable or disable quantization feature from the checkbox."""
+        enabled = getattr(self, "quant_enabled_var", tk.BooleanVar(value=True)).get()
+        self.state.quantize_enabled = bool(enabled)
+
+        # enable/disable the slider and entry widgets
+        if hasattr(self, "quant_widget"):
+            state = "normal" if enabled else "disabled"
+            try:
+                self.quant_widget.slider.config(state=state)
+                self.quant_widget.entry.config(state=state)
+            except Exception:
+                pass
+
+        # If disabled, set to full-range and update UI; if enabled, apply current slider value
+        if not enabled:
+            self.state.quantize_levels = 256
+        else:
+            # reapply slider value
+            self.on_quant_change()
+
+        # regenerate wheel and update displays regardless
+        self.img = generate_colour_wheel(self.size, self.state.hue_shift, self.state.shade, self.state.quantize_levels)
+        self.tk_img = ImageTk.PhotoImage(self.img)
+        self.canvas.itemconfig(self.canvas_image, image=self.tk_img)
+
+        if self.state.color.h is not None:
+            color_info = get_color_info(self.state.color.h, self.state.color.s, self.state.color.v, self.state.quantize_levels)
+            self._update_color_display(color_info)
+
+        self.schedule_populate_squares()
+
     def on_slider(self, event=None):
         """Handle hue and shade slider changes."""
         old_hue = self.state.hue_shift
@@ -190,14 +290,14 @@ class ColourWheelApp:
             color.opp_h = (color.opp_h + hue_delta) % 1.0
             color.v = self.state.shade
             
-            color_info = get_color_info(color.h, color.s, color.v)
+            color_info = get_color_info(color.h, color.s, color.v, self.state.quantize_levels)
             color.rgb = color_info['rgb']
             color.opp_rgb = color_info['opp_rgb']
             
             self._update_color_display(color_info)
         
-        # Update wheel
-        self.img = generate_colour_wheel(self.size, self.state.hue_shift, self.state.shade)
+        # Update wheel (include depth)
+        self.img = generate_colour_wheel(self.size, self.state.hue_shift, self.state.shade, self.state.quantize_levels)
         self.tk_img = ImageTk.PhotoImage(self.img)
         self.canvas.itemconfig(self.canvas_image, image=self.tk_img)
         
@@ -261,7 +361,7 @@ class ColourWheelApp:
         color.v = v
         color.opp_h = calculate_opposite_hue(h)
         
-        color_info = get_color_info(h, s, v)
+        color_info = get_color_info(h, s, v, self.state.quantize_levels)
         color.rgb = color_info['rgb']
         color.opp_rgb = color_info['opp_rgb']
         
@@ -294,7 +394,7 @@ class ColourWheelApp:
             s = r / radius
             v = self.state.shade
             
-            color_info = get_color_info(shifted_angle, s, v)
+            color_info = get_color_info(shifted_angle, s, v, self.state.quantize_levels)
             self._update_color_display(color_info)
             
             # Clear square hover text
@@ -342,7 +442,7 @@ class ColourWheelApp:
     
     def populate_squares(self):
         """Generate and display gradient color squares."""
-        self.gradient_display.populate(self.state.hue_shift, self.state.shade)
+        self.gradient_display.populate(self.state.hue_shift, self.state.shade, self.state.quantize_levels)
         self._update_gradient_endpoints_display()
 
     def on_square_hover(self, idx):
@@ -350,7 +450,7 @@ class ColourWheelApp:
         self.state.hovered_square_idx = idx
         
         color_info = self.gradient_display.get_color_at_index(
-            idx, self.state.hue_shift, self.state.shade
+            idx, self.state.hue_shift, self.state.shade, self.state.quantize_levels
         )
         
         # Show in hover text
@@ -386,6 +486,7 @@ class ColourWheelApp:
             self.state.color.s,
             self.state.color.v,
             self.state.color.opp_h,
+            self.state.quantize_levels
         )
 
 

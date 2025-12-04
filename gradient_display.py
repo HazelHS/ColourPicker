@@ -46,9 +46,12 @@ class GradientDisplay:
         
         return h1, s1, v1, h2, s2, v2
     
-    def get_gradient_endpoint_colors(self, hue_shift, shade):
+    def get_gradient_endpoint_colors(self, hue_shift, shade, levels=65536):
         """
         Get color info for first and last gradient colors.
+        
+        Args:
+            levels: Number of levels in the gradient
         
         Returns:
             Tuple of (first_color_info, last_color_info)
@@ -59,18 +62,18 @@ class GradientDisplay:
         first_color_info = get_gradient_color_at_index(
             0, gradient.steps, h1, s1, v1, h2, s2, v2,
             gradient.fine_shade1, gradient.fine_shade2, gradient.fine_hue2,
-            gradient.curve, shade
+            gradient.curve, shade, levels
         )
         
         last_color_info = get_gradient_color_at_index(
             gradient.steps - 1, gradient.steps, h1, s1, v1, h2, s2, v2,
             gradient.fine_shade1, gradient.fine_shade2, gradient.fine_hue2,
-            gradient.curve, shade
+            gradient.curve, shade, levels
         )
         
         return first_color_info, last_color_info
     
-    def populate(self, hue_shift, shade):
+    def populate(self, hue_shift, shade, levels=65536):
         """Generate and display gradient color squares."""
         # Clear existing squares
         for widget in self.frame.winfo_children():
@@ -84,7 +87,7 @@ class GradientDisplay:
         colors = calculate_gradient_colors(
             gradient.steps, h1, s1, v1, h2, s2, v2,
             gradient.fine_shade1, gradient.fine_shade2, gradient.fine_hue2,
-            gradient.curve, shade
+            gradient.curve, shade, levels
         )
         
         # Create squares
@@ -107,7 +110,7 @@ class GradientDisplay:
             
             self.squares.append(square)
     
-    def get_color_at_index(self, idx, hue_shift, shade):
+    def get_color_at_index(self, idx, hue_shift, shade, levels=65536):
         """Get color info for a specific gradient square."""
         gradient = self.app_state.gradient
         h1, s1, v1, h2, s2, v2 = self.get_default_colors(hue_shift, shade)
@@ -115,5 +118,5 @@ class GradientDisplay:
         return get_gradient_color_at_index(
             idx, gradient.steps, h1, s1, v1, h2, s2, v2,
             gradient.fine_shade1, gradient.fine_shade2, gradient.fine_hue2,
-            gradient.curve, shade
+            gradient.curve, shade, levels
         )
